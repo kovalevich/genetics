@@ -69,10 +69,41 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             9 -> setTrap() // поставить ловушку
             10 -> neutralizeTrap() // нейтрализовать ловушку
             11 -> division() // деление клетки
+            12 -> findExit() // поиск выхода и выход
             else -> return false
         }
 
         return super.action()
+    }
+
+    /* ищем выход и идем
+    * если выхода нет пробуем найти вокруг органику и съесть
+    * если нет ищем слабого юнита и убить его
+    * если нет ищем открытые ловушки */
+    private fun findExit(): Boolean {
+
+        val aroundObjects = world.map.getAroundObjects(coordinates)
+
+        val exit = aroundObjects.find { it is Empty }
+        if (exit is Empty) {
+            step(exit)
+            return true
+        }
+
+        val organic = aroundObjects.find { it is Organic }
+        if (organic is Organic) {
+            eat(organic)
+            return true
+        }
+
+        val target = aroundObjects.find { it is Bio && this > it }
+        if (target is Bio) {
+            attack(target)
+            return true
+        }
+
+        left()
+        return false
     }
 
     /* деление юнита, если хватает энергии */
