@@ -41,7 +41,6 @@ open class MapObject(var coordinates: Point, private val world: World) {
         age ++
         if (condition == 0) dead()
 
-        //println("----->>>>$this")
         return true
     }
 
@@ -71,13 +70,13 @@ open class MapObject(var coordinates: Point, private val world: World) {
         )
     }
 
-    // получим координаты центра ребра j
-    protected fun getCoordinatesOfCenterRebr(j: Int, center: PointF = PointF(cx, cy)): PointF {
+    // получим координаты центра ребра по напавлению direct
+    protected fun getCoordinatesOfCenterRebr(direct: Int, center: PointF = PointF(cx, cy)): PointF {
         val i:Float = Math.sqrt(Math.pow(drawSize.toDouble(), 2.0) - Math.pow(drawSize.toDouble() / 2, 2.0)).toFloat()
         val ii:Float = Math.sqrt(Math.pow(i.toDouble(), 2.0) - Math.pow(i.toDouble() / 2, 2.0)).toFloat()
 
         var coord = PointF(center.x, center.y)
-        when(j){
+        when(direct){
             0 -> coord = PointF(center.x, center.y - i)
             1 -> coord = PointF(center.x + ii, center.y - i / 2)
             2 -> coord = PointF(center.x + ii, center.y + i / 2)
@@ -86,6 +85,20 @@ open class MapObject(var coordinates: Point, private val world: World) {
             5 -> coord = PointF(center.x - ii, center.y - i / 2)
         }
         return coord
+    }
+
+    /*
+    * получаем направление к объекту по координатам */
+    protected fun getDirectToObject(from: Point, to: Point): Int {
+        when{
+            from.x == to.x && from.y > to.y -> return 0
+            from.x < to.x && from.y > to.y -> return 1
+            from.x < to.x && from.y < to.y -> return 2
+            from.x == to.x && from.y < to.y -> return 3
+            from.x > to.x && from.y < to.y -> return 4
+            from.x > to.x && from.y > to.y -> return 5
+        }
+        return 0
     }
 
     open fun draw(canvas: Canvas, paint: Paint, center: PointF = PointF(cx, cy), size: Float) {

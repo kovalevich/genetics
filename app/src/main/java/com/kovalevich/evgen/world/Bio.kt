@@ -21,16 +21,14 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     val strength: Double
         get() = power * Math.sqrt(energy.toDouble())
 
-    /*
-
-    текущее направление инициализируется рандомно
-    0 - вверх
-    1 - верх-право
-    2 - низ-право
-    3 - вниз
-    4 - низ-лево
-    5 - верх-лево
-     */
+    /* текущее направление инициализируется рандомно
+    * 0 - вверх
+    * 1 - верх-право
+    * 2 - низ-право
+    * 3 - вниз
+    * 4 - низ-лево
+    * 5 - верх-лево
+    */
     var direct = (0..5).random()
         set(value) {
             field = value
@@ -38,15 +36,8 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             if (value > 5) field = 0
         }
 
-    /* пол юнита задается рандомно при инициализации объекта
-    true = муж.
-    false = жен.
-     */
-    val sex = Random().nextBoolean()
-
-    /*
-    индикатор следующего action
-    инкриментируется при каждом ходе
+    /* индикатор следующего action
+     * инкриментируется при каждом ходе
      */
     private var currentAction = 0
         set(value) {
@@ -55,12 +46,17 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             if (value > Settings.NUMBER_OF_BEHAVIOR_ITEM) field = 0
         }
 
+    /* цвет
+    * меняется от красного в зависимости от силы юнита */
+    override val color: Int
+        get() = Color.RED + power * 10
+
     override fun action(): Boolean {
 
         /* в зависимости от текущего номера экшена выполняем действие из набора
         все действия по умолчанию выполняются по направлению юнита direct
          */
-        when(currentAction++) {
+        when(dnk.behavior[currentAction++]) {
             0 -> left() // поворот налево
             1 -> right() // поворот направо
             2 -> step() // сделать шаг
@@ -72,10 +68,24 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             8 -> eat() // кушать
             9 -> setTrap() // поставить ловушку
             10 -> neutralizeTrap() // нейтрализовать ловушку
+            11 -> division() // деление клетки
             else -> return false
         }
 
         return super.action()
+    }
+
+    /* деление юнита, если хватает энергии */
+    private fun division(): Boolean {
+        if(energy <= Settings.CHILD_ENERGY) return false
+
+        val emptyObj = world.map.getAroundObjects(coordinates).find { it is Empty }
+        if (emptyObj is Empty) {
+            world.map.addObject(Bio(dnk.clone(), emptyObj.coordinates, world))
+            energy -= Settings.CHILD_ENERGY
+        }
+        else return false
+        return true
     }
 
     private fun neutralizeTrap(trap: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // нейтрализовать ловушку
@@ -84,7 +94,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         if (trap.visible && dnk.hasSkill(3)) { // если ловушку видно и есть навык работы с ловушками, то обезвреживаем
             coordinates = trap.coordinates
             world.map.deleteObject(trap.coordinates)
-
+            energy -= Settings.NEUTRALIZE_TRAP_ENERGY
             teachOthers(3)
         }
         else { // иначе умираем
@@ -128,9 +138,8 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     private fun symbiosis(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // симбиоз
         if(target !is Bio || !target.dnk.hasSkill(6) || !dnk.hasSkill(6)) return false
 
-        TODO("придумай как будет выглядеть симбиоз двух юнитов")
 
-        //return true
+        return true
     }
 
     private fun explore(aroundObjects: List<Any?> = world.map.getAroundObjects(coordinates)): Boolean { // исследовать окресность
@@ -154,8 +163,8 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         return true
     }
 
-    private fun synthesisOfMinerals() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun synthesisOfMinerals(): Boolean {
+        return false
     }
 
     private fun photosynthesis() { // фотосинтез
@@ -167,7 +176,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
         when(target) {
             is Bio -> {
-
+                direct = getDirectToObject(coordinates, target.coordinates)
                 if(this == target) {
                     dead()
                     target.dead()
@@ -182,11 +191,22 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
                     return false
                 }
 
-                energy -= (strength - target.strength).toInt()
+                /*
+                * расходуем энергию на убийство
+                * увеличиваем мощность юнита
+                * увеличиваем счетчик убийств
+                * умирает цель
+                * если есть навык, кушаем добычу и учим другихтак делать*/
+                energy -= energy - (strength - target.strength).toInt()
                 power++
                 world.countKills++
-
+                target.dead()
                 teachOthers(2)
+
+                if(dnk.hasSkill(7)) {
+                    eat()
+                    teachOthers(7)
+                }
             }
             is Poison -> neutralizePoison(target)
             is Organic -> eat(target)
@@ -223,14 +243,17 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             is Empty -> coordinates = directObj.coordinates
             is Poison -> dead()
         }
+        energy -= Settings.STEP_ENERGY
     }
 
     private fun right() { // повернуться направо
-        direct ++
+        direct++
+        energy--
     }
 
     private fun left() { // повернуться налево
-        direct --
+        direct--
+        energy--
     }
 
     private fun teachOthers(skill: Int) { // обучение окружающих юнитов
@@ -240,6 +263,8 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
     override fun draw(canvas: Canvas, paint: Paint, center: PointF, size: Float) {
         super.draw(canvas, paint, center, size)
+        val directPoint = getCoordinatesOfCenterRebr(direct)
+        canvas.drawLine(directPoint.x, directPoint.y, cx, cy, paint)
     }
 
     override fun dead() {
@@ -247,7 +272,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         super.dead()
     }
 
-    operator fun compareTo(target: Bio): Int {
+    private operator fun compareTo(target: Bio): Int {
         when{
             power * energy > target.power * target.energy -> return 1
             power * energy < target.power * target.energy -> return -1
@@ -255,5 +280,9 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         }
 
         return 1
+    }
+
+    override fun toString(): String {
+        return "coordinates: ${coordinates.x}:${coordinates.y}"
     }
 }

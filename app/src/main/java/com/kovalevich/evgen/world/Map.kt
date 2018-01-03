@@ -41,7 +41,7 @@ class Map(val world: World){
 
             if (obj != null) return obj
 
-            return Empty(directCoordinates.x, directCoordinates.y, world)
+            return Empty(directCoordinates, world)
         }
 
         return null
@@ -108,10 +108,12 @@ class Map(val world: World){
     }
 
     private fun generateBio(world: World) {
-        val baseDnk = listOf(0,1,2,3,4,5,6,8,10,11,15)
-        addObject(Bio(
-                List(Settings.NUMBER_OF_GENES, {baseDnk[Random().nextInt(baseDnk.size)]}),
-                (0 until Settings.MAP_WIDTH).random(), (0 until Settings.MAP_HEIGHT).random(),
+        val dnk = Dnk(
+                List(Settings.SIZE_BEHAVIOR, {(0..Settings.COUNT_BEHAVIOR_TYPES).random()}),
+                MutableList(Settings.SIZE_SKILLS, {(0..9).random()})
+        )
+        addObject(Bio(dnk,
+                Point((0 until Settings.MAP_WIDTH).random(), (0 until Settings.MAP_HEIGHT).random()),
                 world
         ))
     }
@@ -127,7 +129,8 @@ class Map(val world: World){
 
     fun findPartnerObject(coordinates: Point, sex: Boolean): Bio? {
 
-        val partner = bios.find { it.sex != sex && coordinates.x in ((it.coordinates.x - 5)..(it.coordinates.x + 5)) && coordinates.y in ((it.coordinates.y - 5)..(it.coordinates.y + 5)) }
+        val partner = bios.find { // it.sex != sex &&
+                coordinates.x in ((it.coordinates.x - 5)..(it.coordinates.x + 5)) && coordinates.y in ((it.coordinates.y - 5)..(it.coordinates.y + 5)) }
         if(partner != null) return partner
 
         return null

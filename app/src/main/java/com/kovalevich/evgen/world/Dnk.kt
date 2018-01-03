@@ -1,5 +1,8 @@
 package com.kovalevich.evgen.world
 
+import java.util.*
+import kotlin.collections.ArrayList
+
 /*
  * behavior - поведение юнита
  * последовательность экшенов
@@ -13,10 +16,12 @@ package com.kovalevich.evgen.world
  * 4 -> защита
  * 5 -> яды
  * 6 -> симбиоз
+ * 7 -> съесть добычу послеубийства
+ * 8 -> деление клетки (рождение потомка)
  *
  * character - характер по 100-бальной шкале 0 - спокойный 100 - агрессивный
  * */
-class Dnk(val behavior: List<Int>, val skills: MutableList<Int>, character: Int = 0) {
+class Dnk(val behavior: List<Int>, private val skills: MutableList<Int>, character: Int = 0) {
 
     var character = 0
         set(value) {
@@ -36,6 +41,17 @@ class Dnk(val behavior: List<Int>, val skills: MutableList<Int>, character: Int 
         if((0..100).random() < character) return true
 
         return false
+    }
+
+    /*
+    * клониование днк для нового юнита с возможной мутацией 1 гена поведения
+    * скилы и хаактер копироются от одителя без изменений*/
+    fun clone(): Dnk{
+        val b = ArrayList(behavior)
+        if(Random().nextFloat() < Settings.PROBABILITY_MUTATION) {
+            b[(0..(b.count() - 1)).random()] = (0..Settings.COUNT_BEHAVIOR_TYPES).random()
+        }
+        return Dnk(b, skills, character)
     }
 
 }
