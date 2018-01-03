@@ -12,8 +12,8 @@ object Settings {
     const val ORGANIC_ENERGY = 30
     const val SLEEP_ENERGY = 50
     const val PROBABILITY_MUTATION = 0.06
-    const val NUMBER_OF_GENES = 30
-    const val NUMBER_OF_TYPE_GENES = 16
+    const val NUMBER_OF_BEHAVIOR_ITEM = 20
+    const val NUMBER_OF_GENES = 16
     const val STRENGTH = 1
     const val PRINT_SIZE = 10F
     const val PRINT_STROKE = 1F

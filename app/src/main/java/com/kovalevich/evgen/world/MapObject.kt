@@ -2,7 +2,7 @@ package com.kovalevich.evgen.world
 
 import android.graphics.*
 
-open class MapObject(protected var x: Int, protected var y: Int, private val world: World) {
+open class MapObject(var coordinates: Point, private val world: World) {
 
     /*
     * -1, 0 - мертв
@@ -23,17 +23,10 @@ open class MapObject(protected var x: Int, protected var y: Int, private val wor
         get() = getCoordinatesOfCenter().x
     protected val cy: Float
         get() {
-            if (x % 2 == 1) {
+            if (coordinates.x % 2 == 1) {
                 return getCoordinatesOfCenter().y + deltaY
             }
             return getCoordinatesOfCenter().y
-        }
-
-    var coordinates: Point
-        get() = Point(x, y)
-        set(value) {
-            x = value.x
-            y = value.y
         }
 
     // вспомогательные пееменные
@@ -60,7 +53,7 @@ open class MapObject(protected var x: Int, protected var y: Int, private val wor
 
     // получить коодинаты центра для отисовки объекта
     private fun getCoordinatesOfCenter(): PointF{
-        return PointF(drawSize * 2 * x + drawSize - (drawSize / 2) * x, deltaY * 2 * y + deltaY)
+        return PointF(drawSize * 2 * coordinates.x + drawSize - (drawSize / 2) * coordinates.x, deltaY * 2 * coordinates.y + deltaY)
     }
 
     // получить коодинаты вешин шестиуголька для отрисовки объекта
