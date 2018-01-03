@@ -1,9 +1,6 @@
 package com.kovalevich.evgen.world
 
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Point
-import android.graphics.PointF
+import android.graphics.*
 import java.util.*
 
 class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject(coordinates,world) {
@@ -15,7 +12,17 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             if(value <= 0) dead()
             if(value > Settings.MAX_ENERGY) field = Settings.MAX_ENERGY
         }
+
+    // сила юнита увеличивается с каждым убийством
+    var power = Settings.START_POWER
+
+    // коэфиициент мощности юнита, зависит от силы и накопленной энергии
+    // определяет кто победит в поединке
+    val strength: Double
+        get() = power * Math.sqrt(energy.toDouble())
+
     /*
+
     текущее направление инициализируется рандомно
     0 - вверх
     1 - верх-право
@@ -91,12 +98,10 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     private fun setTrap(): Boolean { // поставить ловушку
 
         val directObject = world.map.getDirectObject(direct, coordinates)
-        if (directObject !is Empty || !dnk.skills.contains(3)) return false
+        if (directObject !is Empty || !dnk.hasSkill(3)) return false
 
         world.map.addObject(Trap(directObject.coordinates, world))
-        // окружающие юниты получают навык
-        val aroundObjects = world.map.getAroundObjects(coordinates).filter { it is Bio }
-        aroundObjects.forEach { (it as Bio).dnk.addSkill(3) }
+        teachOthers(3)
 
         return true
     }
@@ -162,6 +167,25 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
         when(target) {
             is Bio -> {
+
+                if(this == target) {
+                    dead()
+                    target.dead()
+                    world.countKills += 2
+                    return true
+                }
+
+                target.dnk.character++ // увеличение агрессии цели
+
+                if (target > this) {
+                    target.attack(this)
+                    return false
+                }
+
+                energy -= (strength - target.strength).toInt()
+                power++
+                world.countKills++
+
                 teachOthers(2)
             }
             is Poison -> neutralizePoison(target)
@@ -221,5 +245,15 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     override fun dead() {
         world.map.addObject(Organic(energy / 2, coordinates, world))
         super.dead()
+    }
+
+    operator fun compareTo(target: Bio): Int {
+        when{
+            power * energy > target.power * target.energy -> return 1
+            power * energy < target.power * target.energy -> return -1
+            power * energy == target.power * target.energy -> return 0
+        }
+
+        return 1
     }
 }

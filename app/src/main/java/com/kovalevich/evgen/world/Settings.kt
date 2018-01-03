@@ -5,7 +5,7 @@ object Settings {
     const val MAP_WIDTH = 70
     const val MAP_HEIGHT = 70
     const val MAX_ENERGY = 1000
-    const val START_ENERGY = 1000
+    const val START_ENERGY = 100
     const val CHILD_ENERGY = 500
     const val STEP_ENERGY = 1
     const val PHOTOSYNTHESIS_ENERGY = 10
@@ -24,4 +24,5 @@ object Settings {
     const val OXYGEN = 1000000F
     // всего минералов
     const val MINERALS = 1000000F
+    const val START_POWER = 1
 }
