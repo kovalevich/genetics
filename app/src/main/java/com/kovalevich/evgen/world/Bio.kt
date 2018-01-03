@@ -123,13 +123,30 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     private fun symbiosis(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // симбиоз
         if(target !is Bio || !target.dnk.hasSkill(6) || !dnk.hasSkill(6)) return false
 
+        TODO("придумай как будет выглядеть симбиоз двух юнитов")
 
-
-        return true
+        //return true
     }
 
-    private fun explore() { // исследовать окресность
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun explore(aroundObjects: List<Any?> = world.map.getAroundObjects(coordinates)): Boolean { // исследовать окресность
+
+        // запоминаем количество энегии и будем обследовать соседей, пока не пополним запас
+        val beforeEnergy = energy
+
+        aroundObjects.forEach {
+            when(it) {
+                is Organic -> eat(it)
+                is Bio -> if (dnk.aggression()) attack(it)
+                is Trap -> neutralizeTrap(it)
+                is Poison -> neutralizePoison(it)
+            }
+            if(energy > beforeEnergy) return true
+        }
+
+        val emptyObj = aroundObjects.find { it is Empty }
+        if(emptyObj is Empty) step(emptyObj)
+
+        return true
     }
 
     private fun synthesisOfMinerals() {
