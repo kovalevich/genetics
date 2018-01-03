@@ -8,6 +8,13 @@ import java.util.*
 
 class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject(coordinates,world) {
 
+    // энегия. когда энегия заканчивается юнит умирает
+    var energy = Settings.START_ENERGY
+        set(value) {
+            field = value
+            if(value <= 0) dead()
+            if(value > Settings.MAX_ENERGY) field = Settings.MAX_ENERGY
+        }
     /*
     текущее направление инициализируется рандомно
     0 - вверх
@@ -95,21 +102,30 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     }
 
     private fun eat(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // кушать
-        if(!dnk.hasSkill(2)) return false
+        if(!dnk.hasSkill(1)) return false
 
         when(target) {
             is Bio -> attack(target)
-            is Poison -> {}
-            is Organic -> {}
+            is Poison -> neutralizePoison()
+            is Organic -> {
+                energy += target.energy
+                world.map.deleteObject(target.coordinates)
+                teachOthers(1)
+                step(Empty(target.coordinates,world))
+            }
             is Empty -> step(target)
-            is Trap -> neutralizeTrap(target)
+            is Trap -> dead()
         }
 
         return true
     }
 
-    private fun symbiosis() { // симбиоз
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun symbiosis(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // симбиоз
+        if(target !is Bio || !target.dnk.hasSkill(6) || !dnk.hasSkill(6)) return false
+
+
+
+        return true
     }
 
     private fun explore() { // исследовать окресность
@@ -121,7 +137,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     }
 
     private fun photosynthesis() { // фотосинтез
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        energy += Settings.PHOTOSYNTHESIS_ENERGY
     }
 
     private fun attack(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // кушать
@@ -129,7 +145,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
         when(target) {
             is Bio -> {
-
+                teachOthers(2)
             }
             is Poison -> neutralizePoison(target)
             is Organic -> eat(target)
@@ -140,21 +156,31 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         return true
     }
 
-    private fun neutralizePoison(poison: Poison) {
+    private fun neutralizePoison(poison: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean {
+        if (poison !is Poison) return false
 
+        if (dnk.hasSkill(5)) { // если есть навык работы с ядами, то обезвреживаем
+            coordinates = poison.coordinates
+            world.map.deleteObject(poison.coordinates)
+
+            teachOthers(5)
+        }
+        else { // иначе умираем
+            dead()
+        }
+
+        return true
     }
 
     private fun step(directObj: MapObject? = world.map.getDirectObject(direct, coordinates)) { // шаг вперед
 
         when(directObj){
-            is Bio -> { // если по направлению движения находится другой юнит действуем по обстоятельствам
-
+            is Bio -> { // если по направлению движения находится другой юнит действуем по характеру
+                if(dnk.aggression()) attack(directObj)
             }
-            is Trap -> { // если ловушка обнаружена ранее, то пробуем обезвредить, если нет, попадаем в ловушку
-                neutralizeTrap()
-            }
+            is Trap -> dead()
             is Empty -> coordinates = directObj.coordinates
-            is Poison -> {}
+            is Poison -> dead()
         }
     }
 
@@ -176,7 +202,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     }
 
     override fun dead() {
-        world.map.addObject(Organic(coordinates.x, coordinates.y, world))
+        world.map.addObject(Organic(energy / 2, coordinates, world))
         super.dead()
     }
 }

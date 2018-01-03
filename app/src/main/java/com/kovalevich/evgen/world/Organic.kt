@@ -1,6 +1,8 @@
 package com.kovalevich.evgen.world
 
-class Organic(x: Int, y: Int, world: World): MapObject(x,y, world) {
+import android.graphics.Point
+
+class Organic(val energy: Int, coordinates: Point, world: World): MapObject(coordinates, world) {
 
     override var age = 0
         set (value) {
@@ -11,6 +13,6 @@ class Organic(x: Int, y: Int, world: World): MapObject(x,y, world) {
         }
 
     override fun toString(): String {
-        return "com.kovalevich.evgen.genetic.Organic map=${x}:${y}"
+        return "com.kovalevich.evgen.genetic.Organic map=${coordinates.x}:${coordinates.y}"
     }
 }
