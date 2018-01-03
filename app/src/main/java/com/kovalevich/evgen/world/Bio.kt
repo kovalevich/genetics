@@ -67,12 +67,11 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     private fun neutralizeTrap(trap: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // нейтрализовать ловушку
         if (trap !is Trap) return false
 
-        if (trap.visible && dnk.skills.contains(3)) { // если ловушку видно и есть навык работы с ловушками, то обезвреживаем
+        if (trap.visible && dnk.hasSkill(3)) { // если ловушку видно и есть навык работы с ловушками, то обезвреживаем
             coordinates = trap.coordinates
             world.map.deleteObject(trap.coordinates)
 
-            // окружающие юниты получают навык
-
+            teachOthers(3)
         }
         else { // иначе умираем
             trap.visible = true
@@ -82,12 +81,31 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         return true
     }
 
-    private fun setTrap() { // поставить ловушку
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun setTrap(): Boolean { // поставить ловушку
+
+        val directObject = world.map.getDirectObject(direct, coordinates)
+        if (directObject !is Empty || !dnk.skills.contains(3)) return false
+
+        world.map.addObject(Trap(directObject.coordinates, world))
+        // окружающие юниты получают навык
+        val aroundObjects = world.map.getAroundObjects(coordinates).filter { it is Bio }
+        aroundObjects.forEach { (it as Bio).dnk.addSkill(3) }
+
+        return true
     }
 
-    private fun eat() { // кушать
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun eat(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // кушать
+        if(!dnk.hasSkill(2)) return false
+
+        when(target) {
+            is Bio -> attack(target)
+            is Poison -> {}
+            is Organic -> {}
+            is Empty -> step(target)
+            is Trap -> neutralizeTrap(target)
+        }
+
+        return true
     }
 
     private fun symbiosis() { // симбиоз
@@ -106,13 +124,27 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    private fun attack() { // атаковать
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun attack(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // кушать
+        if(!dnk.hasSkill(2)) return false
+
+        when(target) {
+            is Bio -> {
+
+            }
+            is Poison -> neutralizePoison(target)
+            is Organic -> eat(target)
+            is Empty -> step(target)
+            is Trap -> neutralizeTrap(target)
+        }
+
+        return true
     }
 
-    private fun step() { // шаг вперед
-        // проверяем что у нас по направлению движения
-        val directObj = world.map.getDirectObject(direct, coordinates)
+    private fun neutralizePoison(poison: Poison) {
+
+    }
+
+    private fun step(directObj: MapObject? = world.map.getDirectObject(direct, coordinates)) { // шаг вперед
 
         when(directObj){
             is Bio -> { // если по направлению движения находится другой юнит действуем по обстоятельствам
@@ -132,6 +164,11 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
     private fun left() { // повернуться налево
         direct --
+    }
+
+    private fun teachOthers(skill: Int) { // обучение окружающих юнитов
+        val aroundObjects = world.map.getAroundObjects(coordinates).filter { it is Bio }
+        aroundObjects.forEach { (it as Bio).dnk.addSkill(skill) }
     }
 
     override fun draw(canvas: Canvas, paint: Paint, center: PointF, size: Float) {

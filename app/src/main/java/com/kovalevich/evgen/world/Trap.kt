@@ -1,11 +1,8 @@
 package com.kovalevich.evgen.world
 
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.PointF
+import android.graphics.*
 
-class Trap(x: Int, y: Int, world: World): MapObject(x, y, world) {
+class Trap(coordinates: Point, world: World): MapObject(coordinates, world) {
 
     var visible: Boolean = false
 
@@ -16,7 +13,7 @@ class Trap(x: Int, y: Int, world: World): MapObject(x, y, world) {
         }
 
     override fun toString(): String {
-        return "com.kovalevich.evgen.genetic.Trap map=$x:$y"
+        return "com.kovalevich.evgen.genetic.Trap map=${coordinates.x}:${coordinates.y}"
     }
 
     override fun draw(canvas: Canvas, paint: Paint, center: PointF, size: Float) {
