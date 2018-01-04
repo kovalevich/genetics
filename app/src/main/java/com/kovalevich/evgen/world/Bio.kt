@@ -21,6 +21,12 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     val strength: Double
         get() = power * Math.sqrt(energy.toDouble())
 
+    // таймер сна
+    var sleepTimer: Int = 0
+        set(value) {
+            field = value
+            if(value < 0) field = 0
+        }
     /* текущее направление инициализируется рандомно
     * 0 - вверх
     * 1 - верх-право
@@ -53,6 +59,12 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
     override fun action(): Boolean {
 
+        /* если спит прибавляет по 10 энергии за ход */
+        if(sleepTimer-- > 0) {
+            energy += 10
+            return super.action()
+        }
+
         /* в зависимости от текущего номера экшена выполняем действие из набора
         все действия по умолчанию выполняются по направлению юнита direct
          */
@@ -70,10 +82,29 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             10 -> neutralizeTrap() // нейтрализовать ловушку
             11 -> division() // деление клетки
             12 -> findExit() // поиск выхода и выход
+            13 -> sleep() // сон
+            14 -> hunt() // охота
             else -> return false
         }
 
         return super.action()
+    }
+
+    /* охотимся на юнитов в соседних клетках
+    * нападаем на слабых или спящих */
+    private fun hunt(aroundObjects: List<Any?> = world.map.getAroundObjects(coordinates)): Boolean {
+        val target = aroundObjects.find { it is Bio && (this > it || it.sleepTimer > 0) }
+        if (target is Bio) {
+            attack(target)
+            return true
+        }
+        return false
+    }
+
+    /* юнит засыпает на определенное число ходов
+    * во время сна юнит накапливает энегию, но становится уязвимым */
+    private fun sleep() {
+        sleepTimer = Settings.SLEEP_TIME
     }
 
     /* ищем выход и идем
@@ -96,11 +127,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             return true
         }
 
-        val target = aroundObjects.find { it is Bio && this > it }
-        if (target is Bio) {
-            attack(target)
-            return true
-        }
+        hunt(aroundObjects)
 
         left()
         return false
@@ -208,7 +235,8 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         when(target) {
             is Bio -> {
                 direct = getDirectToObject(coordinates, target.coordinates)
-                if(this == target) {
+
+                if(this == target && target.sleepTimer == 0) {
                     dead()
                     target.dead()
                     world.countKills += 2
@@ -217,18 +245,19 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
                 target.dnk.character++ // увеличение агрессии цели
 
-                if (target > this) {
+                if (target > this  && target.sleepTimer == 0) {
                     target.attack(this)
                     return false
                 }
 
                 /*
-                * расходуем энергию на убийство
+                * расходуем энергию на убийство, если уель не спит
                 * увеличиваем мощность юнита
                 * увеличиваем счетчик убийств
                 * умирает цель
                 * если есть навык, кушаем добычу и учим другихтак делать*/
-                energy -= energy - (strength - target.strength).toInt()
+                if(target.sleepTimer != 0)
+                    energy -= energy - (strength - target.strength).toInt()
                 power++
                 world.countKills++
                 target.dead()
@@ -264,6 +293,10 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         return true
     }
 
+    /* сделать шаг вперед, или на переданный объект
+    * если объект био, атакуем
+    * если ловушка - смерть
+    * если яд - смерть */
     private fun step(directObj: MapObject? = world.map.getDirectObject(direct, coordinates)) { // шаг вперед
 
         when(directObj){

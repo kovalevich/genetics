@@ -5,11 +5,11 @@ object Settings {
     const val MAP_WIDTH = 70
     const val MAP_HEIGHT = 70
     const val MAX_ENERGY = 1000
-    const val START_ENERGY = 100
-    const val CHILD_ENERGY = 500
+    const val START_ENERGY = 50
+    const val CHILD_ENERGY = 600
     const val STEP_ENERGY = 1
-    const val PHOTOSYNTHESIS_ENERGY = 10
-    const val SLEEP_ENERGY = 50
+    const val PHOTOSYNTHESIS_ENERGY = 3
+    const val SLEEP_TIME = 10
     const val PROBABILITY_MUTATION = 0.06
     const val NUMBER_OF_BEHAVIOR_ITEM = 20
     const val PRINT_SIZE = 10F
