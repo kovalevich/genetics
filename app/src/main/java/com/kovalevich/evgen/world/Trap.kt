@@ -19,9 +19,9 @@ class Trap(coordinates: Point, world: World): MapObject(coordinates, world) {
     override fun draw(canvas: Canvas, paint: Paint, center: PointF, size: Float) {
         super.draw(canvas, paint, center, size)
 
-        val xy = getCoordinatesOfVertices()
+        val xy = getCoordinatesOfVertices(center)
         xy.forEach {
-            canvas.drawLine(it.x, it.y, cx, cy, paint)
+            canvas.drawLine(it.x, it.y, center.x, center.y, paint)
         }
     }
 }

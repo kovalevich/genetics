@@ -26,6 +26,6 @@ object Settings {
     const val SIZE_BEHAVIOR = 25 // длина поведенческой цепочки днк
     const val COUNT_BEHAVIOR_TYPES = 15 // количество вариантов поведения
     const val SIZE_SKILLS = 5 // количество навыков у сгенерированных юнитов
-    const val NEUTRALIZE_TRAP_ENERGY = 20 // энегии требуется для нейтрализации ловушки
-    const val NEUTRALIZE_POISON_ENERGY = 20 // энегии требуется для нейтрализации ловушки
+    const val TRAP_ENERGY = 20 // энегии требуется для нейтрализации ловушки
+    const val POISON_ENERGY = 20 // энегии требуется для нейтрализации ловушки
 }

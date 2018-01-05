@@ -27,6 +27,11 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             field = value
             if(value < 0) field = 0
         }
+
+    /* колония юнита
+    * может быть null если не состоит в колонии */
+    private var colony: Colony? = null
+
     /* текущее направление инициализируется рандомно
     * 0 - вверх
     * 1 - верх-право
@@ -55,7 +60,13 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     /* цвет
     * меняется от красного в зависимости от силы юнита */
     override val color: Int
-        get() = Color.RED + power * 10
+        get() {
+            if(colony is Colony) return (colony as Colony).color
+            return Color.RED + power * 10
+        }
+
+    override val strokeWidth: Float
+        get() = super.strokeWidth + 1
 
     override fun action(): Boolean {
 
@@ -86,6 +97,8 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             14 -> hunt() // охота
             else -> return false
         }
+
+        energy--
 
         return super.action()
     }
@@ -140,6 +153,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         val emptyObj = world.map.getAroundObjects(coordinates).find { it is Empty }
         if (emptyObj is Empty) {
             world.map.addObject(Bio(dnk.clone(), emptyObj.coordinates, world))
+            world.countChildrens++
             energy -= Settings.CHILD_ENERGY
         }
         else return false
@@ -148,11 +162,13 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
     private fun neutralizeTrap(trap: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // нейтрализовать ловушку
         if (trap !is Trap) return false
+        if(colony is Colony && !(colony as Colony).checkDistance(trap))
+            return false
 
         if (trap.visible && dnk.hasSkill(3)) { // если ловушку видно и есть навык работы с ловушками, то обезвреживаем
             coordinates = trap.coordinates
             world.map.deleteObject(trap.coordinates)
-            energy -= Settings.NEUTRALIZE_TRAP_ENERGY
+            energy -= Settings.TRAP_ENERGY
             teachOthers(3)
         }
         else { // иначе умираем
@@ -168,6 +184,7 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         val directObject = world.map.getDirectObject(direct, coordinates)
         if (directObject !is Empty || !dnk.hasSkill(3)) return false
 
+        energy -= Settings.TRAP_ENERGY
         world.map.addObject(Trap(directObject.coordinates, world))
         teachOthers(3)
 
@@ -175,8 +192,11 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     }
 
     private fun eat(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // кушать
-        if(!dnk.hasSkill(1)) return false
+        if(!dnk.hasSkill(1) || target == null) return false
+        if(colony is Colony && !(colony as Colony).checkDistance(target))
+            return false
 
+        direct = getDirectToObject(coordinates, target.coordinates)
         when(target) {
             is Bio -> attack(target)
             is Poison -> neutralizePoison()
@@ -193,10 +213,39 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
         return true
     }
 
+    /* симбиоз юнитов
+    * попытка создать или присоедениться к колонии
+    * или присоеденить юнита к колонии
+    * если есть навык симбиоза */
     private fun symbiosis(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // симбиоз
         if(target !is Bio || !target.dnk.hasSkill(6) || !dnk.hasSkill(6)) return false
 
+        var cn = Colony(world)
+        if(colony is Colony) cn = colony as Colony
+        if(target.colony is Colony) cn = target.colony as Colony
 
+        joinToColony(cn)
+        target.joinToColony(cn)
+
+        return true
+    }
+
+    /* присоединение к колонии*/
+    private fun joinToColony(cn: Colony): Boolean {
+        if (colony is Colony) return true
+
+        cn.addBio(this)
+        colony = cn
+
+        return true
+    }
+
+    /* выход из колонии*/
+    private fun outFromColony(): Boolean{
+        if(colony is Colony) {
+            (colony as Colony).deleteBio(this)
+            colony = null
+        }
         return true
     }
 
@@ -230,12 +279,13 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     }
 
     private fun attack(target: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // кушать
-        if(!dnk.hasSkill(2)) return false
+        if(!dnk.hasSkill(2) || target == null) return false
+        if(colony is Colony && !(colony as Colony).checkDistance(target))
+            return false
 
+        direct = world.map.getDirectToObject(this, target)
         when(target) {
             is Bio -> {
-                direct = getDirectToObject(coordinates, target.coordinates)
-
                 if(this == target && target.sleepTimer == 0) {
                     dead()
                     target.dead()
@@ -297,8 +347,15 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
     * если объект био, атакуем
     * если ловушка - смерть
     * если яд - смерть */
-    private fun step(directObj: MapObject? = world.map.getDirectObject(direct, coordinates)) { // шаг вперед
+    private fun step(directObj: MapObject? = world.map.getDirectObject(direct, coordinates)): Boolean { // шаг вперед
+        /* если впереди стенка или отрыв от колонии
+        * то ничего не делаем*/
+        if (directObj == null) return false
 
+        if(colony is Colony && !(colony as Colony).checkDistance(directObj))
+            return false
+
+        direct = world.map.getDirectToObject(this, directObj)
         when(directObj){
             is Bio -> { // если по направлению движения находится другой юнит действуем по характеру
                 if(dnk.aggression()) attack(directObj)
@@ -308,16 +365,16 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
             is Poison -> dead()
         }
         energy -= Settings.STEP_ENERGY
+
+        return true
     }
 
     private fun right() { // повернуться направо
         direct++
-        energy--
     }
 
     private fun left() { // повернуться налево
         direct--
-        energy--
     }
 
     private fun teachOthers(skill: Int) { // обучение окружающих юнитов
@@ -327,12 +384,13 @@ class Bio(private val dnk: Dnk, coordinates: Point, val world: World): MapObject
 
     override fun draw(canvas: Canvas, paint: Paint, center: PointF, size: Float) {
         super.draw(canvas, paint, center, size)
-        val directPoint = getCoordinatesOfCenterRebr(direct)
-        canvas.drawLine(directPoint.x, directPoint.y, cx, cy, paint)
+        val directPoint = getCoordinatesOfCenterRebr(direct, center)
+        canvas.drawLine(directPoint.x, directPoint.y, center.x,center.y, paint)
     }
 
     override fun dead() {
         world.map.addObject(Organic(energy / 2, coordinates, world))
+        world.countDeaths++
         super.dead()
     }
 
